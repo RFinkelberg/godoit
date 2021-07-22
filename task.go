@@ -1,6 +1,8 @@
 package godoit
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"time"
 )
@@ -9,12 +11,12 @@ type Priority string
 
 const (
 	NONE Priority = ""
-	A             = "(A)"
-	B             = "(B)"
-	C             = "(C)"
-	D             = "(D)"
-	E             = "(E)"
-	F             = "(F)"
+	A    Priority = "(A)"
+	B    Priority = "(B)"
+	C    Priority = "(C)"
+	D    Priority = "(D)"
+	E    Priority = "(E)"
+	F    Priority = "(F)"
 )
 
 type Task struct {
@@ -27,52 +29,7 @@ type Task struct {
 	CompletedDate time.Time
 	Done          bool
 	Context       string
-	// TODO decide if we need completion andtherefore creation dates
 }
-
-// func NewTask(body string, scheduled, due string, project string, done bool, context string) (*Task, error) {
-// 	var task Task
-// 	if len(body) <= 0 {
-// 		return nil, errors.New("Task cannot have an empty body")
-// 	} else {
-// 		task.Body = body
-// 	}
-
-// 	if len(scheduled) > 0 {
-// 		scheduledTime, err := time.Parse(layoutISO, scheduled)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		task.Scheduled = scheduledTime
-// 	}
-
-// 	if len(due) > 0 {
-// 		dueTime, err := time.Parse(layoutISO, due)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		task.Scheduled = dueTime
-// 	}
-
-// 	if len(project) > 0 {
-// 		if strings.HasPrefix(project, "+") {
-// 			task.Project = project
-// 		} else {
-// 			task.Project = "+" + project
-// 		}
-// 	}
-
-// 	if len(context) > 0 {
-// 		if strings.HasPrefix(context, "@") {
-// 			task.Context = context
-// 		} else {
-// 			task.Context = "@" + context
-// 		}
-// 	}
-
-// 	task.Done = done
-// 	return &task, nil
-// }
 
 func (t Task) String() string {
 	builder := strings.Builder{}
@@ -85,13 +42,6 @@ func (t Task) String() string {
 	if !t.Created.IsZero() {
 		builder.WriteString(t.Created.Format(layoutISO) + " ")
 	}
-	// NOTE the body should contain the project and context
-	// if len(t.Project) > 0 {
-	// 	builder.WriteString(t.Project + " ")
-	// }
-	// if len(t.Context) > 0 {
-	// 	builder.WriteString(t.Context + " ")
-	// }
 	builder.WriteString(t.Body)
 	if !t.Due.IsZero() {
 		builder.WriteString("due:" + t.Due.Format(layoutISO))
@@ -99,14 +49,27 @@ func (t Task) String() string {
 	return builder.String()
 }
 
-type TaskList map[int]*Task
-
-func (tl TaskList) AddTask(task *Task) {
-	tl[len(tl)] = task
+type TaskList struct {
+	tasks map[int]*Task
 }
 
-func (tl TaskList) CompleteTask(id int) bool {
-	task, prs := tl[id]
+func NewTaskList(tasks []*Task) TaskList {
+	tl := TaskList{}
+	for _, task := range tasks {
+		tl.Add(task)
+	}
+	return tl
+}
+
+func (tl *TaskList) Add(task *Task) {
+	if tl.tasks == nil {
+		tl.tasks = make(map[int]*Task)
+	}
+	tl.tasks[len(tl.tasks)] = task
+}
+
+func (tl *TaskList) Complete(id int) bool {
+	task, prs := tl.tasks[id]
 	if prs {
 		task.Done = true
 		task.CompletedDate = time.Now()
@@ -115,11 +78,27 @@ func (tl TaskList) CompleteTask(id int) bool {
 	return false
 }
 
-func (tl TaskList) RemoveTask(id int) bool {
-	_, prs := tl[id]
+func (tl *TaskList) RemoveTask(id int) bool {
+	_, prs := tl.tasks[id]
 	if prs {
-		delete(tl, id)
+		delete(tl.tasks, id)
 		return true
 	}
 	return false
+}
+
+func (tl *TaskList) SaveFile(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	for _, task := range tl.tasks {
+		_, err := f.WriteString(task.String())
+		if err != nil {
+			return fmt.Errorf("error writing to file %s: %v", path, err)
+		}
+	}
+	return nil
 }

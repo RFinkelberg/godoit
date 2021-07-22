@@ -1,9 +1,7 @@
 package godoit
 
 import (
-	"bufio"
 	"errors"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -55,13 +53,19 @@ func ParseTaskString(s string) (Task, error) {
 		Priority: Priority(priority),
 	}
 	if len(dueDate) > 0 {
-		due, err := time.Parse(layoutISO, dueDate)
+		// NOTE we have to remove the "due:" tag key
+		// TODO be able to handle generic key:value tag pairs
+		due, err := time.Parse(layoutISO, strings.TrimPrefix(dueDate, "due:"))
 		if err != nil {
 			return task, err
 		}
 		task.Due = due
 	}
 	if len(createdDate) > 0 {
+		// NOTE: The created date can have multiple different prefixes, so we
+		// need a sub regex to extract the date itself. This would be easier
+		// if golang regex supported lookbehind (or maybe with capture groups)
+		createdDate = regexp.MustCompile(`\d\d\d\d-\d\d-\d\d`).FindString(createdDate)
 		created, err := time.Parse(layoutISO, createdDate)
 		if err != nil {
 			return task, err
@@ -78,26 +82,4 @@ func ParseTaskString(s string) (Task, error) {
 	}
 
 	return task, nil
-}
-
-// func LoadTodotxt(w io.Reader)
-func LoadTodotxt(path string) (TaskList, error) {
-	//TODO
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var tasks TaskList
-	scanner := bufio.NewScanner(bufio.NewReader(f))
-	for scanner.Scan() {
-		text := scanner.Text()
-		// match := pattern.FindStringSubmatch(text)
-		task, err := ParseTaskString(text)
-		if err != nil {
-			return tasks, err
-		}
-		tasks.AddTask(&task)
-	}
-	return tasks, nil
 }
