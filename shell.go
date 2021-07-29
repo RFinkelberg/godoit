@@ -13,8 +13,13 @@ type session struct {
 }
 
 func parseCmd(line string) (Command, string, error) {
-	tokens := strings.SplitN(strings.TrimSpace(line), " ", 1)
-	args := strings.TrimSpace(tokens[1])
+	tokens := strings.SplitN(strings.TrimSpace(line), " ", 2)
+	var args string
+	if len(tokens) == 2 {
+		args = strings.TrimSpace(tokens[1])
+	} else {
+		args = ""
+	}
 	var cmd Command
 	switch strings.ToLower(tokens[0]) {
 	case "load":

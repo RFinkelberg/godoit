@@ -3,6 +3,7 @@ package godoit
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 )
 
@@ -22,8 +23,11 @@ var (
 		return true, nil
 	}
 	cmdList = func(s *session, _ string) (bool, error) {
-		for i, task := range s.tasks {
-			fmt.Printf("(%d):\t%s", i, task.String())
+		if s.TaskList == nil {
+			return true, nil
+		}
+		for i := range s.tasks {
+			fmt.Printf("(%d):\t%s\n", i, s.tasks[i].String())
 		}
 		return true, nil
 	}
@@ -40,9 +44,14 @@ var (
 		if len(args) == 0 {
 			args = s.savePath
 		}
+		if args == "--force" {
+			defer os.Exit(0)
+			return true, nil
+		}
 		if err := s.SaveFile(args); err != nil {
 			return false, err
 		}
+		defer os.Exit(0)
 		return true, nil
 	}
 	cmdDone = func(s *session, args string) (bool, error) {

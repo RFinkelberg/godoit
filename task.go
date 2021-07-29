@@ -88,14 +88,15 @@ func (tl *TaskList) RemoveTask(id int) bool {
 }
 
 func (tl *TaskList) SaveFile(path string) error {
-	f, err := os.Open(path)
+	// f, err := os.Open(path)
+	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("error opening file: %v", err)
 	}
 	defer f.Close()
 
 	for _, task := range tl.tasks {
-		_, err := f.WriteString(task.String())
+		_, err := f.WriteString(task.String() + "\n")
 		if err != nil {
 			return fmt.Errorf("error writing to file %s: %v", path, err)
 		}
